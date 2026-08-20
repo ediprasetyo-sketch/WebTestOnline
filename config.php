@@ -16,46 +16,25 @@ const DB_PASS = '';
  * Optional public base URL override.
  * Set PUBLIC_BASE_URL in the web-server environment when the application is
  * behind a reverse proxy, Cloudflare Tunnel, or uses a fixed public domain.
- * Example: https://example.com/ujian-online
  */
 function public_base_url(): string {
     $configured = trim((string)(getenv('PUBLIC_BASE_URL') ?: ''));
-    if ($configured !== '') {
-        return rtrim($configured, '/');
-    }
-
+    if ($configured !== '') return rtrim($configured, '/');
     $forwardedProto = trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]);
-    $https = ($forwardedProto !== '')
-        ? strtolower($forwardedProto) === 'https'
-        : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $https = ($forwardedProto !== '') ? strtolower($forwardedProto) === 'https' : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
     $scheme = $https ? 'https' : 'http';
-
     $forwardedHost = trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ''))[0]);
     $host = $forwardedHost !== '' ? $forwardedHost : trim((string)($_SERVER['HTTP_HOST'] ?? ''));
-    if ($host === '') {
-        return app_base_path();
-    }
-
+    if ($host === '') return app_base_path();
     return $scheme . '://' . $host . app_base_path();
 }
 
-/** Build an absolute URL suitable for public links and email verification. */
-function public_url(string $path=''): string {
-    return rtrim(public_base_url(), '/') . '/' . ltrim($path, '/');
-}
+function public_url(string $path=''): string { return rtrim(public_base_url(), '/') . '/' . ltrim($path, '/'); }
 
 function db(): PDO {
     static $pdo = null;
     if ($pdo === null) {
-        $pdo = new PDO(
-            'mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4',
-            DB_USER, DB_PASS,
-            [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ]
-        );
+        $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]);
         $pdo->exec("SET time_zone = '+07:00'");
     }
     return $pdo;
@@ -72,14 +51,23 @@ function app_base_path(): string {
     return substr($script, 0, $pos);
 }
 
-function app_url(string $path=''): string {
-    return app_base_path() . '/' . ltrim($path, '/');
+function app_url(string $path=''): string { return app_base_path() . '/' . ltrim($path, '/'); }
+
+/* V6.3.78: inject the audit stylesheet into every HTML admin page that uses require_login('admin'). */
+function admin_ui_audit_buffer(string $html): string {
+    if (stripos($html, '</head>') === false || stripos($html, 'ui-audit-v6378.css') !== false) return $html;
+    $href = app_url('admin/assets/ui-audit-v6378.css') . '?v=' . rawurlencode(app_version());
+    return preg_replace('~</head>~i', '<link rel="stylesheet" href="'.htmlspecialchars($href, ENT_QUOTES, 'UTF-8').'">' . "\n</head>", $html, 1) ?? $html;
 }
 
 function require_login(string $role): void {
     if (empty($_SESSION['user']) || ($_SESSION['user']['role'] ?? null) !== $role) {
         header('Location: ' . app_url('login.php'));
         exit;
+    }
+    if ($role === 'admin' && !defined('ADMIN_UI_AUDIT_BUFFER')) {
+        define('ADMIN_UI_AUDIT_BUFFER', true);
+        ob_start('admin_ui_audit_buffer');
     }
 }
 
@@ -103,11 +91,7 @@ function ensure_migrations(): array {
     static $done = false;
     if ($done) return [];
     $pdo = db();
-    $pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
-        version VARCHAR(64) PRIMARY KEY,
-        checksum CHAR(64) NOT NULL,
-        applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(64) PRIMARY KEY, checksum CHAR(64) NOT NULL, applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $dir = __DIR__ . '/migrations';
     if (!is_dir($dir)) { $done = true; return []; }
     $files = glob($dir . '/*.sql') ?: [];
