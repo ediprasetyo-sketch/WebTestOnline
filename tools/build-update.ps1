@@ -36,13 +36,24 @@ Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $zip -Compr
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($zip)
 try {
-    $entries = $archive.Entries.FullName
-    if (-not ($entries | Where-Object { $_ -match '/VERSION\.txt$' })) {
+    $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\\','/') })
+
+    # VERSION.txt bisa berada di root ZIP atau di satu folder project pembungkus.
+    $hasVersion = $entries | Where-Object { $_ -match '(^|/)VERSION\.txt$' }
+    if (-not $hasVersion) {
         throw 'ZIP hasil tidak memiliki VERSION.txt.'
     }
-    if (-not ($entries | Where-Object { $_ -match '/admin/update\.php$' })) {
+
+    $hasUpdate = $entries | Where-Object { $_ -match '(^|/)admin/update\.php$' }
+    if (-not $hasUpdate) {
         throw 'ZIP hasil tidak memiliki file aplikasi yang diperlukan.'
     }
+
+    $hasManifest = $entries | Where-Object { $_ -match '(^|/)update-manifest\.json$' }
+    if (-not $hasManifest) {
+        throw 'ZIP hasil tidak memiliki update-manifest.json.'
+    }
+
     if ($entries | Where-Object { $_ -match '(^|/)(storage|uploads|\.git)(/|$)|(^|/)config\.php$' }) {
         throw 'ZIP hasil masih berisi file/folder runtime yang harus dikecualikan.'
     }
@@ -54,4 +65,4 @@ finally {
 
 Write-Host "PAKET SIAP: $zip"
 Write-Host "VERSI: $version"
-Write-Host "Paket dibuat dari seluruh source tree saat ini, bukan hanya commit release terakhir."
+Write-Host "Struktur ZIP tervalidasi: VERSION.txt, update-manifest.json, dan admin/update.php ditemukan."
