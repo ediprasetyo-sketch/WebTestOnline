@@ -74,7 +74,6 @@ function preview_image(?string $path): string {
     <?php if(!empty($q['essay_answer_key'])): ?><div class="answer"><b>Jawaban acuan admin:</b> <?=htmlspecialchars($q['essay_answer_key'])?></div><?php endif; ?>
   <?php elseif($q['type']==='matrix_disc'): ?>
     <div class="matrix-preview"><table><thead><tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th></tr></thead><tbody><tr><th>MIRIP</th><?php foreach(['A','B','C','D'] as $x):?><td>○</td><?php endforeach;?></tr><tr><th>TIDAK MIRIP</th><?php foreach(['A','B','C','D'] as $x):?><td>○</td><?php endforeach;?></tr></tbody></table></div>
-    <div class="answer"><b>Kunci admin:</b> MIRIP <?=htmlspecialchars((string)$q['matrix_correct_mirip'])?> · TIDAK MIRIP <?=htmlspecialchars((string)$q['matrix_correct_tidak'])?></div>
   <?php else: ?>
     <div class="options">
       <?php foreach(['A'=>'option_a','B'=>'option_b','C'=>'option_c','D'=>'option_d'] as $letter=>$field): ?>
