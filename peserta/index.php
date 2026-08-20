@@ -9,118 +9,36 @@ if($token!==''){
   $stmt=db()->prepare('SELECT * FROM exams WHERE public_token=? AND active=1 LIMIT 1');
   $stmt->execute([$token]);$publicExam=$stmt->fetch();
   if(!$publicExam)exit('Link ujian tidak valid atau ujian sudah tidak aktif.');
-  if(participant_session()===null||($_SESSION['public_exam_token']??'')!==$token){
-    header('Location: access.php?exam='.rawurlencode($token));exit;
-  }
+  if(participant_session()===null||($_SESSION['public_exam_token']??'')!==$token){header('Location: access.php?exam='.rawurlencode($token));exit;}
   $exams=[$publicExam];
 }else{
-  if(participant_session()===null){header('Location: ' . app_url('login.php'));exit;}
-  $exams=db()->query("SELECT * FROM exams WHERE active=1 ORDER BY start_at")->fetchAll();
+  if(participant_session()===null){header('Location: '.app_url('login.php'));exit;}
+  $exams=db()->query('SELECT * FROM exams WHERE active=1 ORDER BY start_at')->fetchAll();
 }
 $appTitle='REVOPRINTSHOP';
 ?>
 <!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=htmlspecialchars($appTitle)?></title>
 <style>
-:root{--blue:#175cd3;--ink:#17202a;--muted:#667085;--line:#e4e7ec}*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial;background:#f5f7fb;color:var(--ink);font-size:16px}.top{background:#101828;color:#fff;padding:18px}.wrap{max-width:1000px;margin:auto;padding:24px}.brand{font-weight:800;font-size:20px}.top a{color:#fff}.card{border:1px solid var(--line);background:#fff;padding:22px;border-radius:14px;margin:14px 0;box-shadow:0 4px 16px #10182808}.timer{position:sticky;top:8px;background:#17202a;color:#fff;padding:16px;border-radius:10px;font-size:26px;font-weight:800;display:flex;justify-content:space-between;z-index:5}.q{border:1px solid #ddd;padding:18px;margin:14px 0;border-radius:10px}.opt{display:block;margin:12px 0;font-size:17px}.opt input{transform:scale(1.15);margin-right:8px}.hidden{display:none}.danger{background:#b42318!important}.qimg{display:block;width:auto;max-width:100%;max-height:420px;margin:14px 0;border-radius:12px;border:1px solid #e4e7ec;object-fit:contain;background:#fff}.imgerr{color:#b42318;background:#fef3f2;padding:10px;border-radius:8px}.qtext{margin-bottom:12px;font-size:18px;line-height:1.55}.qnum{font-weight:800;margin-right:4px}textarea.answerbox{width:100%;min-height:190px;padding:14px;font:17px/1.55 Inter,Arial,sans-serif;border:1px solid #98a2b3;border-radius:10px;resize:vertical}button{padding:11px 16px;background:#175cd3;color:#fff;border:0;border-radius:8px;font-size:16px;font-weight:800;cursor:pointer}button:disabled{opacity:.6;cursor:not-allowed}.saved{font-size:13px;color:#027a48;margin-top:6px}.loading{opacity:.7}
-
-.examhead{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;border-bottom:1px solid #e4e7ec;padding-bottom:14px;margin-bottom:14px}.eyebrow{font-size:12px;font-weight:800;color:#667085;letter-spacing:.08em}.progress{font-weight:800;background:#eef4ff;color:#175cd3;padding:9px 12px;border-radius:999px}.qtop{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.points{white-space:nowrap;background:#ecfdf3;color:#027a48;padding:7px 10px;border-radius:8px;font-weight:800;font-size:14px}.answerlabel{display:block;font-weight:800;margin:10px 0 7px}.navrow{display:flex;align-items:center;gap:10px;margin-top:18px}.navrow .saved{flex:1}.secondary{background:#667085}.submit{background:#027a48}.smallsave{min-height:18px}@media(max-width:650px){.examhead,.qtop{flex-direction:column}.navrow{flex-wrap:wrap}.navrow .saved{flex-basis:100%;order:-1}.points{align-self:flex-start}}
-.matrix-wrap{margin-top:14px;border:1px solid #e4e7ec;border-radius:14px;overflow:hidden}.matrix-title{padding:11px 14px;background:#f8fafc;font-size:12px;font-weight:800;color:#475467}.matrix-grid{display:grid;grid-template-columns:minmax(120px,1.7fr) repeat(4,minmax(62px,1fr));align-items:center}.matrix-grid>div,.matrix-choice{min-height:52px;border-bottom:1px solid #e4e7ec;display:flex;align-items:center;justify-content:center}.matrix-col{font-weight:800;font-size:13px;background:#fafbfc}.matrix-row-label{justify-content:flex-start!important;padding:0 14px;font-size:12px;font-weight:900;color:#344054}.matrix-choice input{position:absolute;opacity:0}.matrix-choice span{width:21px;height:21px;border:2px solid #b8c1cc;border-radius:50%;display:block}.matrix-choice input:checked+span{border:6px solid #175cd3}.matrix-options{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #e4e7ec}.matrix-options div{padding:11px 14px;font-size:13px;border-bottom:1px solid #eef0f3}.matrix-options b{color:#175cd3}@media(max-width:600px){.matrix-grid{grid-template-columns:100px repeat(4,1fr)}.matrix-options{grid-template-columns:1fr}.matrix-row-label{padding:0 8px;font-size:10px}.matrix-choice{min-height:48px}.matrix-options div{font-size:12px}}
-/* V6.3.56 Mobile-first exam layout */
-@media(max-width:700px){
-  .top{padding:13px 14px}.brand{font-size:17px}.wrap{padding:12px}
-  .card{padding:16px 13px;border-radius:14px;margin:10px 0}
-  .timer{position:sticky;top:4px;padding:12px;font-size:21px;border-radius:12px}
-  .q{padding:14px 12px;margin:10px 0}.qtext{font-size:16px;line-height:1.55}
-  .opt{padding:10px 8px;margin:7px 0;border:1px solid #eef0f3;border-radius:10px}
-  .opt input{transform:scale(1.2);margin-right:10px}
-  .qimg{max-height:300px;margin:10px 0}
-  textarea.answerbox{min-height:140px;font-size:16px}
-  button{min-height:44px;padding:11px 14px}
-  .navrow{position:sticky;bottom:0;background:#fff;padding:10px 0 2px;margin-top:12px;z-index:4}
-  .navrow button{flex:1}
-  .progress{font-size:13px;padding:8px 10px}
-  .matrix-wrap{border-radius:10px;overflow:auto}
-  .matrix-grid{min-width:440px;grid-template-columns:120px repeat(4,80px)}
-  .matrix-grid>div,.matrix-choice{min-height:50px}
-  .matrix-title{font-size:12px}
-  .matrix-options{min-width:440px}
-}
-@media(max-width:390px){
-  .timer{font-size:18px}.brand{font-size:16px}
-  .q{padding:12px 10px}.opt{font-size:15px}
-}
-
-
-/* V6.3.58 responsive participant baseline */
-img{max-width:100%;height:auto}
-@media (max-width:760px){
-  body{font-size:16px!important;overflow-x:hidden}
-  .wrap{width:100%;max-width:none;padding:14px!important}
-  .card{padding:18px 14px!important;margin:12px 0!important;border-radius:14px!important}
-  input,select,textarea,button{font-size:16px!important;max-width:100%}
-  input,select,textarea{min-height:44px}
-  button,.btn{min-height:44px;touch-action:manipulation}
-  table{max-width:100%}
-}
-@media (max-width:480px){
-  .wrap{padding:10px!important}
-  .card{padding:16px 12px!important}
-}
-
-
-/* V6.3.58 exam usability */
-@media(max-width:760px){
-  .top{padding:14px!important}.brand{font-size:18px!important}
-  .timer{top:6px!important;font-size:21px!important;padding:12px!important}
-  .q{padding:14px 12px!important;margin:12px 0!important}
-  .qtext{font-size:16px!important;line-height:1.6!important}
-  .opt{padding:10px 8px!important;margin:7px 0!important;border:1px solid #e7eaf0;border-radius:10px}
-  .opt input{transform:scale(1.25)!important;margin-right:12px!important}
-  textarea.answerbox{min-height:150px!important}
-  .navrow{display:flex!important;gap:8px!important;position:sticky!important;bottom:0!important;background:#f5f7fb!important;padding:10px 0!important;z-index:8}
-  .navrow button{flex:1}
-  .matrix-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
-}
-
+:root{--blue:#175cd3;--ink:#17202a;--muted:#667085;--line:#e4e7ec;--green:#027a48}*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#f5f7fb;color:var(--ink)}.top{background:#101828;color:#fff;padding:16px}.wrap{max-width:1000px;margin:auto;padding:22px}.brand{font-size:20px;font-weight:800}.top a{color:#fff}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;margin:14px 0;box-shadow:0 4px 16px #1018280d}.hidden{display:none!important}.timer{position:sticky;top:8px;z-index:10;background:#17202a;color:#fff;border-radius:10px;padding:15px;display:flex;justify-content:space-between;font-size:24px;font-weight:800}.danger{background:#b42318}.examhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:14px}.eyebrow{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.08em}.progress{font-weight:800;background:#eef4ff;color:var(--blue);padding:9px 12px;border-radius:999px}.q{border:1px solid #ddd;padding:18px;margin:14px 0;border-radius:12px;background:#fff}.qtop{display:flex;justify-content:space-between;gap:12px}.qtext{font-size:18px;line-height:1.55}.qnum{font-weight:800}.points{white-space:nowrap;background:#ecfdf3;color:var(--green);padding:7px 10px;border-radius:8px;font-size:13px;font-weight:800}.qimg{display:block;max-width:100%;max-height:420px;margin:14px 0;border:1px solid var(--line);border-radius:10px;object-fit:contain}.opt{display:block;margin:8px 0;padding:10px;border:1px solid #eef0f3;border-radius:10px;font-size:16px}.opt input{transform:scale(1.15);margin-right:10px}textarea.answerbox{width:100%;min-height:170px;padding:12px;border:1px solid #98a2b3;border-radius:10px;font:16px/1.55 inherit}.answerlabel{display:block;font-weight:800;margin:12px 0 7px}.saved{font-size:13px;color:var(--green);min-height:18px;margin-top:7px}.navrow{display:flex;align-items:center;gap:10px;margin-top:18px}.navrow .saved{flex:1}button{padding:11px 16px;background:var(--blue);color:#fff;border:0;border-radius:8px;font-size:16px;font-weight:800;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.secondary{background:#667085}.submit{background:var(--green)}.matrix-wrap{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:auto}.matrix-grid{display:grid;grid-template-columns:minmax(120px,1.7fr) repeat(4,minmax(62px,1fr));align-items:center;min-width:430px}.matrix-grid>div,.matrix-choice{min-height:52px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center}.matrix-col{font-weight:800;background:#fafbfc}.matrix-row-label{justify-content:flex-start!important;padding:0 12px;font-size:12px;font-weight:900}.matrix-choice input{position:absolute;opacity:0}.matrix-choice span{width:21px;height:21px;border:2px solid #b8c1cc;border-radius:50%;display:block}.matrix-choice input:checked+span{border:6px solid var(--blue)}.mode-note{font-size:13px;color:var(--muted)}
+@media(max-width:700px){.top{padding:13px}.wrap{padding:12px}.card{padding:16px 13px}.timer{top:4px;font-size:20px}.examhead,.qtop{flex-direction:column}.q{padding:14px 12px}.qtext{font-size:16px}.opt{padding:11px 9px}.navrow{position:sticky;bottom:0;background:#f5f7fb;padding:10px 0;z-index:9;flex-wrap:wrap}.navrow button{flex:1}.navrow .saved{flex-basis:100%;order:-1}}
 </style></head><body>
 <div class="top"><div class="wrap" style="padding:0"><span class="brand"><?=htmlspecialchars($appTitle)?></span><span style="float:right"><?=htmlspecialchars(($_SESSION['participant']['full_name']??$_SESSION['participant']['email']??''))?> · <a href="logout.php">Keluar Peserta</a></span></div></div>
-<div class="wrap"><div id="list"><h1>Ujian Online</h1><?php foreach($exams as $e): ?><div class="card"><h2><?=htmlspecialchars($e['title'])?></h2><p>Peserta: <b><?=htmlspecialchars(($_SESSION['participant']['full_name']??''))?></b><br><span style="color:#667085;font-size:14px"><?=htmlspecialchars(($_SESSION['participant']['email']??''))?></span></p><p>Durasi <?=floor($e['duration_seconds']/60)?> menit · <?=htmlspecialchars($e['start_at'])?> sampai <?=htmlspecialchars($e['end_at'])?></p><button onclick="startExam(<?=$e['id']?>)">Mulai / Lanjutkan</button></div><?php endforeach; ?></div>
-<div id="exam" class="hidden">
-  <div id="timerBox" class="timer"><span>Waktu tersisa</span><span id="timer">--:--</span></div>
-  <div class="card">
-    <div class="examhead"><div><div class="eyebrow">UJIAN ONLINE</div><h1 id="title"></h1></div><div id="progress" class="progress">Soal 0 / 0</div></div>
-    <div id="questions"></div>
-    <div class="navrow">
-      <button id="prevBtn" class="secondary" onclick="goQuestion(-1)">← Sebelumnya</button>
-      <span id="saveStatus" class="saved"></span>
-      <button id="nextBtn" onclick="goQuestion(1)">Berikutnya →</button>
-      <button id="submitBtn" class="submit" onclick="submitExam(false)">Kirim Ujian</button>
-    </div>
-  </div>
-</div></div>
+<div class="wrap"><div id="list"><h1>Ujian Online</h1><?php foreach($exams as $e): ?><div class="card"><h2><?=htmlspecialchars($e['title'])?></h2><p>Peserta: <b><?=htmlspecialchars(($_SESSION['participant']['full_name']??''))?></b><br><span class="mode-note"><?=htmlspecialchars(($_SESSION['participant']['email']??''))?></span></p><p>Durasi <?=floor($e['duration_seconds']/60)?> menit</p><button onclick="startExam(<?=$e['id']?>)">Mulai / Lanjutkan</button></div><?php endforeach; ?></div>
+<div id="exam" class="hidden"><div id="timerBox" class="timer"><span>Waktu tersisa</span><span id="timer">--:--</span></div><div class="card"><div class="examhead"><div><div class="eyebrow">UJIAN ONLINE</div><h1 id="title"></h1></div><div id="progress" class="progress">Soal 0 / 0</div></div><div id="questions"></div><div id="navRow" class="navrow"><button id="prevBtn" class="secondary" onclick="goQuestion(-1)">← Sebelumnya</button><span id="saveStatus" class="saved"></span><button id="nextBtn" onclick="goQuestion(1)">Berikutnya →</button><button id="submitBtn" class="submit" onclick="submitExam(false)">Kirim Ujian</button></div></div></div></div>
 <script>
-const csrf=<?=json_encode(csrf_token())?>;
-let attempt=null,deadline=0,clockOffset=0,interval=null,examId=null,submitting=false,currentIndex=0,questions=[];
-const pending=new Map(),timers=new Map();
+const csrf=<?=json_encode(csrf_token())?>;let attempt=null,deadline=0,clockOffset=0,interval=null,examId=null,submitting=false,currentIndex=0,questions=[],questionMode='all';const pending=new Map(),timers=new Map();
 async function api(url,opt={}){opt.headers={...(opt.headers||{}),'X-CSRF-Token':csrf,'Content-Type':'application/json'};const r=await fetch(url,opt);const d=await r.json().catch(()=>({error:'Respons server tidak valid'}));if(!r.ok)throw Error(d.error||'Gagal');return d}
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
-function imageHtml(path){if(!path)return '';let p=String(path).replace(/\\/g,'/').trim();if(!p)return '';if(!/^https?:\/\//i.test(p)){p=p.replace(/^\/+/, '');p='../'+p}return `<div><img class="qimg" src="${esc(p)}" alt="Gambar soal" loading="eager" onerror="this.style.display='none';this.parentElement.querySelector('.imgerr').style.display='block'"><div class="imgerr" style="display:none">Gambar soal tidak dapat dimuat.</div></div>`}
-function syncClock(ms){if(typeof ms==='number')clockOffset=ms-Date.now()}
-function nowServerMs(){return Date.now()+clockOffset}
-function queueSave(qid,opt,essay,immediate=false){if(timers.has(qid))clearTimeout(timers.get(qid));const run=()=>saveNow(qid,opt,essay);if(immediate)run();else timers.set(qid,setTimeout(run,350))}
-function saveNow(qid,opt,essay){const p=(async()=>{try{const d=await api('../api/save_answer.php',{method:'POST',body:JSON.stringify({attempt_id:attempt,question_id:qid,selected_option:opt,essay_answer:essay})});syncClock(d.server_now_ms);deadline=d.deadline_ms;document.getElementById('saveStatus').textContent='Jawaban tersimpan';return d}catch(e){document.getElementById('saveStatus').textContent='Gagal menyimpan';console.warn(e);throw e}})();pending.set(qid,p);p.finally(()=>{if(pending.get(qid)===p)pending.delete(qid)});return p}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}function syncClock(ms){if(typeof ms==='number')clockOffset=ms-Date.now()}function nowServerMs(){return Date.now()+clockOffset}
+function imageHtml(path){if(!path)return '';let p=String(path).replace(/\\/g,'/').trim();if(!p)return '';if(!/^https?:\/\//i.test(p))p='../'+p.replace(/^\/+/, '');return `<img class="qimg" src="${esc(p)}" alt="Gambar soal">`}
+function status(t){document.getElementById('saveStatus').textContent=t||''}function queueSave(qid,opt,essay,immediate=false){if(timers.has(qid))clearTimeout(timers.get(qid));const run=()=>saveNow(qid,opt,essay);if(immediate)run();else timers.set(qid,setTimeout(run,350))}
+function saveNow(qid,opt,essay){const p=(async()=>{try{const d=await api('../api/save_answer.php',{method:'POST',body:JSON.stringify({attempt_id:attempt,question_id:qid,selected_option:opt,essay_answer:essay})});syncClock(d.server_now_ms);deadline=d.deadline_ms;status('Jawaban tersimpan');return d}catch(e){status('Gagal menyimpan');throw e}})();pending.set(qid,p);p.finally(()=>{if(pending.get(qid)===p)pending.delete(qid)});return p}
+function saveMatrix(qid,ans){const p=(async()=>{try{const d=await api('../api/save_answer.php',{method:'POST',body:JSON.stringify({attempt_id:attempt,question_id:qid,matrix_answer:ans})});syncClock(d.server_now_ms);deadline=d.deadline_ms;status('Jawaban tersimpan');return d}catch(e){status(e.message||'Gagal menyimpan');throw e}})();pending.set(qid,p);p.finally(()=>{if(pending.get(qid)===p)pending.delete(qid)});return p}
 async function flushSaves(){for(const t of timers.values())clearTimeout(t);timers.clear();if(pending.size)await Promise.allSettled([...pending.values()])}
-function renderQuestion(){const q=questions[currentIndex];if(!q)return;const heading=`<div class="qtop"><div class="qtext"><span class="qnum">${currentIndex+1}.</span>${esc(q.question_text)}</div><span class="points">${esc(q.points??0)} poin</span></div>`;let body='';
-if(q.type==='essay'){body=`${imageHtml(q.question_image)}<label class="answerlabel">Jawaban Anda</label><textarea class="answerbox" data-q="${q.id}" oninput="questionChanged(this)">${esc(q.saved_essay_answer||'')}</textarea><div class="saved smallsave">${q.saved_essay_answer?'Tersimpan':''}</div>`}
-else if(q.type==='matrix_disc'){const saved=q.saved_matrix_answer||{};const cols=['A','B','C','D'];body=`${imageHtml(q.question_image)}<div class="matrix-wrap"><div class="matrix-grid"><div class="matrix-corner"></div>${cols.map(k=>`<div class="matrix-col">${k}</div>`).join('')}${[['mirip','MIRIP'],['tidak_mirip','TIDAK MIRIP']].map(([key,label])=>`<div class="matrix-row-label">${label}</div>${cols.map(k=>`<label class="matrix-choice"><input type="radio" name="matrix_${key}" value="${k}" ${saved[key]===k?'checked':''} onchange="matrixChanged()"><span></span></label>`).join('')}`).join('')}</div></div><div class="saved smallsave">${saved.mirip&&saved.tidak_mirip?'Tersimpan':'Pilih MIRIP dan TIDAK MIRIP'}</div>`}
-else{const saved=q.saved_display_option||'';body=`${imageHtml(q.question_image)}${['A','B','C','D'].map(k=>`<label class="opt"><input type="radio" name="current_q" value="${k}" ${saved===k?'checked':''} onchange="selectOption('${k}')"><b>${k}.</b> ${esc(q['option_'+k.toLowerCase()])}</label>`).join('')}<div class="saved smallsave">${saved?'Tersimpan':''}</div>`}
-document.getElementById('questions').innerHTML=`<div class="q">${heading}${body}</div>`;document.getElementById('progress').textContent=`Soal ${currentIndex+1} / ${questions.length}`;document.getElementById('prevBtn').disabled=currentIndex===0;document.getElementById('nextBtn').classList.toggle('hidden',currentIndex===questions.length-1);document.getElementById('submitBtn').classList.toggle('hidden',currentIndex!==questions.length-1);}
-function currentQ(){return questions[currentIndex]}
-function selectOption(k){const q=currentQ();q.saved_display_option=k;document.getElementById('saveStatus').textContent='Menyimpan...';queueSave(q.id,k,'',true)}
-function questionChanged(el){const q=currentQ();q.saved_essay_answer=el.value;document.getElementById('saveStatus').textContent='Menyimpan...';queueSave(q.id,null,el.value,false)}function matrixChanged(){const q=currentQ();const get=n=>document.querySelector(`input[name="${n}"]:checked`)?.value||'';const ans={mirip:get('matrix_mirip'),tidak_mirip:get('matrix_tidak_mirip')};q.saved_matrix_answer=ans;if(!ans.mirip||!ans.tidak_mirip){document.getElementById('saveStatus').textContent='Pilih satu jawaban pada setiap baris';return}document.getElementById('saveStatus').textContent='Menyimpan...';queueMatrixSave(q.id,ans)}
-function queueMatrixSave(qid,ans){const p=(async()=>{try{const d=await api('../api/save_answer.php',{method:'POST',body:JSON.stringify({attempt_id:attempt,question_id:qid,matrix_answer:ans})});syncClock(d.server_now_ms);deadline=d.deadline_ms;document.getElementById('saveStatus').textContent='Jawaban tersimpan';return d}catch(e){document.getElementById('saveStatus').textContent='Gagal menyimpan';throw e}})();pending.set(qid,p);p.finally(()=>{if(pending.get(qid)===p)pending.delete(qid)});return p}
-async function goQuestion(delta){await flushSaves();const next=currentIndex+delta;if(next<0||next>=questions.length)return;currentIndex=next;renderQuestion();window.scrollTo({top:0,behavior:'smooth'})}
-async function startExam(id){try{examId=id;const d=await api('../api/start.php',{method:'POST',body:JSON.stringify({exam_id:id})});attempt=d.attempt_id;deadline=d.deadline_ms;syncClock(d.server_now_ms);const e=await api('../api/exam.php?id='+encodeURIComponent(id)+'&attempt_id='+encodeURIComponent(attempt));questions=e.questions||[];document.getElementById('title').textContent=e.title;if(!questions.length){alert('Belum ada soal pada ujian ini.');return}currentIndex=0;renderQuestion();document.getElementById('list').classList.add('hidden');document.getElementById('exam').classList.remove('hidden');tick();clearInterval(interval);interval=setInterval(tick,250)}catch(e){alert(e.message)}}
-async function tick(){const left=Math.max(0,deadline-nowServerMs());const s=Math.ceil(left/1000),min=Math.floor(s/60);document.getElementById('timer').textContent=String(min).padStart(2,'0')+':'+String(s%60).padStart(2,'0');if(s<=60)document.getElementById('timerBox').classList.add('danger');if(left<=0){clearInterval(interval);await submitExam(true)}}
+function questionHtml(q,index){const heading=`<div class="qtop"><div class="qtext"><span class="qnum">${index+1}.</span> ${esc(q.question_text)}</div><span class="points">${esc(q.points??0)} poin</span></div>`;let body=imageHtml(q.question_image);if(q.type==='essay'){body+=`<label class="answerlabel">Jawaban Anda</label><textarea class="answerbox" data-q="${q.id}" oninput="essayChanged(this,${q.id})">${esc(q.saved_essay_answer||'')}</textarea>`}else if(q.type==='matrix_disc'){const s=q.saved_matrix_answer||{},c=['A','B','C','D'];body+=`<div class="matrix-wrap"><div class="matrix-grid"><div></div>${c.map(x=>`<div class="matrix-col">${x}</div>`).join('')}${[['mirip','MIRIP'],['tidak_mirip','TIDAK MIRIP']].map(([k,l])=>`<div class="matrix-row-label">${l}</div>${c.map(x=>`<label class="matrix-choice"><input type="radio" name="matrix_${q.id}_${k}" value="${x}" ${s[k]===x?'checked':''} onchange="matrixChanged(${q.id})"><span></span></label>`).join('')}`).join('')}</div></div>`}else{const s=q.saved_display_option||'';body+=['A','B','C','D'].map(x=>`<label class="opt"><input type="radio" name="q_${q.id}" value="${x}" ${s===x?'checked':''} onchange="selectOption(${q.id},'${x}')"><b>${x}.</b> ${esc(q['option_'+x.toLowerCase()]||'')}</label>`).join('')}return `<div class="q" id="question-${q.id}">${heading}${body}</div>`}
+function renderExam(){const all=questionMode==='all';document.getElementById('questions').innerHTML=all?questions.map((q,i)=>questionHtml(q,i)).join(''):questionHtml(questions[currentIndex],currentIndex);document.getElementById('progress').textContent=all?`Semua soal · ${questions.length}`:`Soal ${currentIndex+1} / ${questions.length}`;document.getElementById('prevBtn').classList.toggle('hidden',all);document.getElementById('nextBtn').classList.toggle('hidden',all||currentIndex===questions.length-1);document.getElementById('submitBtn').classList.toggle('hidden',!all&&currentIndex!==questions.length-1);if(!all)document.getElementById('prevBtn').disabled=currentIndex===0}
+function findQ(id){return questions.find(q=>Number(q.id)===Number(id))}function selectOption(id,k){const q=findQ(id);if(!q)return;q.saved_display_option=k;status('Menyimpan...');queueSave(q.id,k,'',true)}function essayChanged(el,id){const q=findQ(id);if(!q)return;q.saved_essay_answer=el.value;status('Menyimpan...');queueSave(q.id,null,el.value,false)}function matrixChanged(id){const q=findQ(id),get=n=>document.querySelector(`input[name="matrix_${id}_${n}"]:checked`)?.value||'',ans={mirip:get('mirip'),tidak_mirip:get('tidak_mirip')};q.saved_matrix_answer=ans;if(!ans.mirip||!ans.tidak_mirip){status('Pilih satu jawaban pada setiap baris');return}if(ans.mirip===ans.tidak_mirip){status('MIRIP dan TIDAK MIRIP harus berbeda');return}status('Menyimpan...');saveMatrix(q.id,ans)}
+async function goQuestion(delta){await flushSaves();const next=currentIndex+delta;if(next<0||next>=questions.length)return;currentIndex=next;renderExam();window.scrollTo({top:0,behavior:'smooth'})}
+async function startExam(id){try{examId=id;const d=await api('../api/start.php',{method:'POST',body:JSON.stringify({exam_id:id})});attempt=d.attempt_id;deadline=d.deadline_ms;syncClock(d.server_now_ms);const e=await api('../api/exam.php?id='+encodeURIComponent(id)+'&attempt_id='+encodeURIComponent(attempt));questions=e.questions||[];questionMode=e.question_mode==='one_by_one'?'one_by_one':'all';document.getElementById('title').textContent=e.title;if(!questions.length){alert('Belum ada soal pada ujian ini.');return}currentIndex=0;renderExam();document.getElementById('list').classList.add('hidden');document.getElementById('exam').classList.remove('hidden');tick();clearInterval(interval);interval=setInterval(tick,250)}catch(e){alert(e.message)}}
+async function tick(){const left=Math.max(0,deadline-nowServerMs()),s=Math.ceil(left/1000),min=Math.floor(s/60);document.getElementById('timer').textContent=String(min).padStart(2,'0')+':'+String(s%60).padStart(2,'0');if(s<=60)document.getElementById('timerBox').classList.add('danger');if(left<=0){clearInterval(interval);await submitExam(true)}}
 async function submitExam(auto){if(submitting)return;submitting=true;document.getElementById('submitBtn').disabled=true;try{await flushSaves();const d=await api('../api/submit.php',{method:'POST',body:JSON.stringify({attempt_id:attempt})});clearInterval(interval);alert(auto?'Waktu habis. Jawaban yang sudah tersimpan dikumpulkan.':'Ujian dikirim. Nilai: '+d.score);location.href='finish.php?attempt='+encodeURIComponent(attempt)+'&auto='+(auto?'1':'0')}catch(e){submitting=false;document.getElementById('submitBtn').disabled=false;alert(e.message)}}
 </script></body></html>
