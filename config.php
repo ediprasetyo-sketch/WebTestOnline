@@ -49,7 +49,7 @@ function app_version(): string {
     return $version;
 }
 
-/* Inject the same visual baseline and master-shell normalizer into every admin HTML page. */
+/* Inject the Dashboard Admin master shell into every admin HTML page. */
 function enable_admin_ui_audit(): void {
     static $enabled = false;
     if ($enabled || PHP_SAPI === 'cli') return;
@@ -59,7 +59,12 @@ function enable_admin_ui_audit(): void {
         $base = rtrim(app_base_path(), '/');
         $prefix = ($base === '' ? '' : $base) . '/admin/assets/';
         $v = rawurlencode(app_version());
+        $name = trim((string)($_SESSION['user']['full_name'] ?? 'Administrator'));
+        if ($name === '') $name = 'Administrator';
+        $nameJson = json_encode($name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $phpJson = json_encode(PHP_VERSION, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $tags = '<link rel="stylesheet" href="'.$prefix.'ui-audit-v6379.css?v='.$v.'">'
+              . '<script>window.__ADMIN_NAME='.$nameJson.';window.__ADMIN_PHP_VERSION='.$phpJson.';</script>'
               . '<script defer src="'.$prefix.'master-shell.js?v='.$v.'"></script>';
         return preg_replace('/<\/head>/i', $tags.'</head>', $html, 1) ?? $html;
     });
