@@ -46,6 +46,9 @@ if($question['type']==='mcq'){
         if(!in_array($choice,['A','B','C','D'],true))json_response(['error'=>'Setiap baris matriks wajib dipilih'],400);
         $matrixAnswer[$key]=$map[$choice]??$choice;
     }
+    if($matrixAnswer['mirip']===$matrixAnswer['tidak_mirip']){
+        json_response(['error'=>'Pilihan MIRIP dan TIDAK MIRIP harus berbeda'],400);
+    }
     $selected=null;
 }else{$selected=null;}
 
