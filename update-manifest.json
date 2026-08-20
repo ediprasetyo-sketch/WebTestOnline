@@ -1,0 +1,7 @@
+{
+  "version": "6.3.56",
+  "package_url": "",
+  "sha256": "",
+  "changelog": "V6.3.48 Full synchronization: update-safe schema helper, Matrix/DISC schema repair, edit support, manifest/version synchronization.",
+  "notes": "Matrix/DISC participant UI cleanup: removed duplicate empty A-D option cards and aligned answer grid with the approved layout."
+}
