@@ -1,5 +1,5 @@
 {
-  "version": "6.3.74",
-  "changelog": "Pilihan Ganda kini fleksibel 2-8 opsi. Edit Soal dapat menambah atau mengurangi pilihan dan opsi yang dihapus tidak disimpan lagi.",
-  "notes": "Preview hanya menampilkan opsi aktif. Kunci jawaban hanya tersedia bila fitur kunci jawaban diaktifkan; Matriks/DISC tetap tanpa poin dan tanpa tampilan kunci admin."
+  "version": "6.3.76",
+  "changelog": "Normalisasi UI halaman Hasil Ujian agar konsisten dengan Admin UI, termasuk statistik, daftar attempt, pencarian peserta, tombol aksi, dan detail attempt.",
+  "notes": "Paket ini kompatibel dengan Update Sistem. Upload ZIP melalui Admin > Update Sistem; backup otomatis dibuat sebelum instalasi."
 }
