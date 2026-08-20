@@ -49,8 +49,7 @@ function app_version(): string {
     return $version;
 }
 
-/* Enforce the same UI baseline on every HTML admin page, including legacy pages
-   that still load their own page-specific stylesheet. */
+/* Inject the same visual baseline and master-shell normalizer into every admin HTML page. */
 function enable_admin_ui_audit(): void {
     static $enabled = false;
     if ($enabled || PHP_SAPI === 'cli') return;
@@ -58,9 +57,11 @@ function enable_admin_ui_audit(): void {
     ob_start(static function(string $html): string {
         if (stripos($html, '</head>') === false || stripos($html, 'admin-layout') === false) return $html;
         $base = rtrim(app_base_path(), '/');
-        $href = ($base === '' ? '' : $base) . '/admin/assets/ui-audit-v6379.css?v=' . rawurlencode(app_version());
-        $tag = '<link rel="stylesheet" href="'.$href.'">';
-        return preg_replace('/<\/head>/i', $tag.'</head>', $html, 1) ?? $html;
+        $prefix = ($base === '' ? '' : $base) . '/admin/assets/';
+        $v = rawurlencode(app_version());
+        $tags = '<link rel="stylesheet" href="'.$prefix.'ui-audit-v6379.css?v='.$v.'">'
+              . '<script defer src="'.$prefix.'master-shell.js?v='.$v.'"></script>';
+        return preg_replace('/<\/head>/i', $tags.'</head>', $html, 1) ?? $html;
     });
 }
 
