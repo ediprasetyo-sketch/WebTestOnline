@@ -1,0 +1,57 @@
+$ErrorActionPreference = 'Stop'
+
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location $root
+
+$version = (Get-Content (Join-Path $root 'VERSION.txt') -Raw).Trim()
+if ($version -notmatch '^\d+\.\d+\.\d+$') {
+    throw "VERSION.txt tidak valid: $version"
+}
+
+$outDir = Join-Path $root 'release'
+New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+$packageRoot = Join-Path $env:TEMP ("WebTestOnline-update-" + $version + "-" + [guid]::NewGuid().ToString('N'))
+$stage = Join-Path $packageRoot 'WebTestOnline'
+New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+$exclude = @('.git','storage','uploads','release','config.php')
+Get-ChildItem -Force $root | Where-Object {
+    $exclude -notcontains $_.Name
+} | ForEach-Object {
+    Copy-Item $_.FullName -Destination $stage -Recurse -Force
+}
+
+$manifest = Join-Path $stage 'update-manifest.json'
+if (-not (Test-Path $manifest)) { throw 'update-manifest.json tidak ditemukan di paket.' }
+$manifestVersion = ((Get-Content $manifest -Raw | ConvertFrom-Json).version).ToString()
+if ($manifestVersion -ne $version) {
+    throw "Versi manifest ($manifestVersion) tidak sama dengan VERSION.txt ($version)."
+}
+
+$zip = Join-Path $outDir ("WebTestOnline-Update-V" + $version + '.zip')
+if (Test-Path $zip) { Remove-Item $zip -Force }
+Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $zip -CompressionLevel Optimal
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::OpenRead($zip)
+try {
+    $entries = $archive.Entries.FullName
+    if (-not ($entries | Where-Object { $_ -match '/VERSION\.txt$' })) {
+        throw 'ZIP hasil tidak memiliki VERSION.txt.'
+    }
+    if (-not ($entries | Where-Object { $_ -match '/admin/update\.php$' })) {
+        throw 'ZIP hasil tidak memiliki file aplikasi yang diperlukan.'
+    }
+    if ($entries | Where-Object { $_ -match '(^|/)(storage|uploads|\.git)(/|$)|(^|/)config\.php$' }) {
+        throw 'ZIP hasil masih berisi file/folder runtime yang harus dikecualikan.'
+    }
+}
+finally {
+    $archive.Dispose()
+    Remove-Item $packageRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host "PAKET SIAP: $zip"
+Write-Host "VERSI: $version"
+Write-Host "Paket dibuat dari seluruh source tree saat ini, bukan hanya commit release terakhir."
