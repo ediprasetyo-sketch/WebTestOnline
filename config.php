@@ -12,6 +12,38 @@ const DB_NAME = 'ujian_online';
 const DB_USER = 'root';
 const DB_PASS = '';
 
+/**
+ * Optional public base URL override.
+ * Set PUBLIC_BASE_URL in the web-server environment when the application is
+ * behind a reverse proxy, Cloudflare Tunnel, or uses a fixed public domain.
+ * Example: https://example.com/ujian-online
+ */
+function public_base_url(): string {
+    $configured = trim((string)(getenv('PUBLIC_BASE_URL') ?: ''));
+    if ($configured !== '') {
+        return rtrim($configured, '/');
+    }
+
+    $forwardedProto = trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]);
+    $https = ($forwardedProto !== '')
+        ? strtolower($forwardedProto) === 'https'
+        : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $scheme = $https ? 'https' : 'http';
+
+    $forwardedHost = trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ''))[0]);
+    $host = $forwardedHost !== '' ? $forwardedHost : trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === '') {
+        return app_base_path();
+    }
+
+    return $scheme . '://' . $host . app_base_path();
+}
+
+/** Build an absolute URL suitable for public links and email verification. */
+function public_url(string $path=''): string {
+    return rtrim(public_base_url(), '/') . '/' . ltrim($path, '/');
+}
+
 function db(): PDO {
     static $pdo = null;
     if ($pdo === null) {
@@ -24,19 +56,18 @@ function db(): PDO {
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]
         );
-
         $pdo->exec("SET time_zone = '+07:00'");
     }
     return $pdo;
 }
 
 function app_base_path(): string {
-    $script = str_replace('\\\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
     $pos = strpos($script, '/admin/');
     if ($pos === false) $pos = strpos($script, '/peserta/');
     if ($pos === false) {
-        $dir = str_replace('\\\\', '/', dirname($script));
-        return ($dir === '/' || $dir === '.' || $dir === '\\\\') ? '' : rtrim($dir, '/');
+        $dir = str_replace('\\', '/', dirname($script));
+        return ($dir === '/' || $dir === '.' || $dir === '\\') ? '' : rtrim($dir, '/');
     }
     return substr($script, 0, $pos);
 }
@@ -59,10 +90,6 @@ function json_response(array $data, int $status=200): never {
     exit;
 }
 
-
-/**
- * Single source of truth for application version.
- */
 function app_version(): string {
     static $version = null;
     if ($version !== null) return $version;
@@ -72,10 +99,6 @@ function app_version(): string {
     return $version;
 }
 
-/**
- * Apply SQL migrations once. Safe to call repeatedly.
- * Each migration is identified by filename and SHA-256 checksum.
- */
 function ensure_migrations(): array {
     static $done = false;
     if ($done) return [];
@@ -98,21 +121,17 @@ function ensure_migrations(): array {
         $st->execute([$version]);
         $old = $st->fetchColumn();
         if ($old !== false) {
-            if (!hash_equals((string)$old, $checksum)) {
-                throw new RuntimeException("Migration checksum berubah: {$version}");
-            }
+            if (!hash_equals((string)$old, $checksum)) throw new RuntimeException("Migration checksum berubah: {$version}");
             continue;
         }
         if ($sql !== '') {
             $pdo->beginTransaction();
             try {
-                // Migration files in this project contain normal SQL statements.
                 foreach (preg_split('/;\s*(?:\r?\n|$)/', $sql) as $statement) {
                     $statement = trim($statement);
                     if ($statement !== '') $pdo->exec($statement);
                 }
-                $pdo->prepare("INSERT INTO schema_migrations(version, checksum) VALUES(?,?)")
-                    ->execute([$version, $checksum]);
+                $pdo->prepare("INSERT INTO schema_migrations(version, checksum) VALUES(?,?)")->execute([$version, $checksum]);
                 $pdo->commit();
                 $applied[] = $version;
             } catch (Throwable $e) {
