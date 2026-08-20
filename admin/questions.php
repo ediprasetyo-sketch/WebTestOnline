@@ -21,8 +21,16 @@ function question_image_url(?string $path): string {
     if($path==='') return '';
     if(preg_match('~^https?://~i',$path)) return $path;
     $path=ltrim(str_replace('\\','/',$path),'/');
-    // The admin page is one directory below the project root.
     return '../'.$path;
+}
+function active_question_options(array $q): array {
+    $letters=['A','B','C','D','E','F','G','H'];
+    $out=[];
+    foreach($letters as $letter){
+        $column='option_'.strtolower($letter);
+        if(array_key_exists($column,$q) && trim((string)($q[$column]??''))!=='') $out[$letter]=(string)$q[$column];
+    }
+    return $out;
 }
 ?>
 <!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kelola Soal</title><link rel="stylesheet" href="assets/admin-ui.css"></head><body>
@@ -36,10 +44,10 @@ function question_image_url(?string $path): string {
 <div class="question-layout"><section class="question-list">
 <div class="section-heading"><div><h3 class="card-title">Daftar Soal</h3><p class="ui-sub">Urutan soal mengikuti nomor yang tampil di ujian.</p></div><input id="questionSearch" class="list-search" placeholder="Cari isi soal..."></div>
 <?php if(!$questions): ?><div class="ui-card empty-state"><b>Belum ada soal.</b><span>Gunakan form di sebelah kanan untuk menambahkan soal pertama.</span></div><?php endif;?>
-<?php foreach($questions as $n=>$q): ?><article class="ui-card question-card" data-search="<?=htmlspecialchars(strtolower($q['question_text']))?>"><div class="question-card-head"><div class="question-number"><?=($n+1)?></div><div class="question-meta"><span class="type-pill <?=$q['type']==='essay'?'essay':''?>"><?=$q['type']==='essay'?'Essay':($q['type']==='matrix_disc'?'Matriks / DISC':'Pilihan Ganda')?></span><span><?=$q['points']?> poin</span></div><div class="question-actions"><a class="action-btn primary" href="edit_question.php?id=<?=$q['id']?>">Edit</a><form method="post" action="delete_question.php" class="inline-form" onsubmit="return confirm('Hapus soal ini?')"><input type="hidden" name="csrf" value="<?=htmlspecialchars(csrf_token())?>"><input type="hidden" name="id" value="<?=$q['id']?>"><button class="action-btn danger">Hapus</button></form></div></div>
+<?php foreach($questions as $n=>$q): $activeOptions=active_question_options($q); ?><article class="ui-card question-card" data-search="<?=htmlspecialchars(strtolower($q['question_text']))?>"><div class="question-card-head"><div class="question-number"><?=($n+1)?></div><div class="question-meta"><span class="type-pill <?=$q['type']==='essay'?'essay':''?>"><?=$q['type']==='essay'?'Essay':($q['type']==='matrix_disc'?'Matriks / DISC':'Pilihan Ganda')?></span><span><?=$q['points']?> poin</span></div><div class="question-actions"><a class="action-btn primary" href="edit_question.php?id=<?=$q['id']?>">Edit</a><form method="post" action="delete_question.php" class="inline-form" onsubmit="return confirm('Hapus soal ini?')"><input type="hidden" name="csrf" value="<?=htmlspecialchars(csrf_token())?>"><input type="hidden" name="id" value="<?=$q['id']?>"><button class="action-btn danger">Hapus</button></form></div></div>
 <div class="question-text"><?=nl2br(htmlspecialchars($q['question_text']))?></div>
 <?php if(!empty($q['question_image'])): ?><img class="question-image" src="<?=htmlspecialchars(question_image_url($q['question_image']))?>" alt="Gambar soal"><?php endif;?>
-<?php if($q['type']==='mcq' || $q['type']==='matrix_disc'): ?><div class="option-grid"><?php foreach(['A'=>'option_a','B'=>'option_b','C'=>'option_c','D'=>'option_d'] as $k=>$col): ?><div class="option-item <?=$q['correct_option']===$k?'correct':''?>"><b><?=$k?></b><span><?=htmlspecialchars((string)$q[$col])?></span><?php if($q['type']==='mcq' && $q['correct_option']===$k): ?><em>✓ Benar</em><?php endif;?><?php if($q['type']==='matrix_disc' && ($q['matrix_correct_mirip']??'')===$k): ?><em>MIRIP</em><?php endif;?><?php if($q['type']==='matrix_disc' && ($q['matrix_correct_tidak']??'')===$k): ?><em>TIDAK MIRIP</em><?php endif;?></div><?php endforeach;?></div><?php else: ?><div class="essay-box">Jawaban essay dinilai melalui hasil ujian.</div><?php endif;?></article><?php endforeach;?>
+<?php if($q['type']==='mcq' || $q['type']==='matrix_disc'): ?><div class="option-grid"><?php foreach($activeOptions as $k=>$value): ?><div class="option-item <?=$q['correct_option']===$k?'correct':''?>"><b><?=$k?></b><span><?=htmlspecialchars($value)?></span><?php if($q['type']==='mcq' && $q['correct_option']===$k): ?><em>✓ Benar</em><?php endif;?><?php if($q['type']==='matrix_disc' && ($q['matrix_correct_mirip']??'')===$k): ?><em>MIRIP</em><?php endif;?><?php if($q['type']==='matrix_disc' && ($q['matrix_correct_tidak']??'')===$k): ?><em>TIDAK MIRIP</em><?php endif;?></div><?php endforeach;?></div><?php else: ?><div class="essay-box">Jawaban essay dinilai melalui hasil ujian.</div><?php endif;?></article><?php endforeach;?>
 <div id="noQuestionResult" class="ui-card empty-state" style="display:none"><b>Soal tidak ditemukan.</b></div>
 </section>
 <aside class="question-side">
@@ -47,50 +55,15 @@ function question_image_url(?string $path): string {
 <h3>+ Tambah Soal</h3><p class="ui-sub">Buat soal baru untuk ujian ini.</p>
 <form method="post" action="save_question.php" enctype="multipart/form-data" class="exam-form">
 <input type="hidden" name="csrf" value="<?=htmlspecialchars(csrf_token())?>"><input type="hidden" name="exam_id" value="<?=$id?>">
-<label>Jenis soal</label>
-<select name="type" id="questionType"><option value="mcq">Pilihan Ganda</option><option value="essay">Essay</option><option value="matrix_disc">Matriks / DISC</option></select>
-
+<label>Jenis soal</label><select name="type" id="questionType"><option value="mcq">Pilihan Ganda</option><option value="essay">Essay</option><option value="matrix_disc">Matriks / DISC</option></select>
 <label>Pertanyaan</label><textarea name="question_text" required placeholder="Tulis pertanyaan..."></textarea>
 <label>Gambar soal <span class="ui-sub">(opsional)</span></label><input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,image/gif">
-
-<div id="mcqFields">
-<div id="optionList" class="form-grid compact-grid"></div>
-<div style="display:flex;gap:8px;margin:10px 0"><button type="button" class="ui-btn secondary" id="addOption">+ Tambah Pilihan</button><button type="button" class="ui-btn secondary" id="removeOption">− Kurangi Pilihan</button></div>
-</div>
-<div id="gradingFields">
-<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="use_answer_key" id="useAnswerKey" checked> Gunakan Kunci Jawaban &amp; Poin</label>
-<div id="gradingDetails"><div id="standard-answer-key"><label>Kunci jawaban</label><select name="correct_option" id="correctOption"></select></div></div>
-</div>
-
-<div id="matrixFields" style="display:none">
-<p class="ui-sub" style="margin:8px 0 10px">Peserta memilih satu jawaban untuk MIRIP dan satu untuk TIDAK MIRIP.</p>
-<div class="form-grid compact-grid">
-<div><label>Kunci MIRIP</label><select name="matrix_correct_mirip"><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
-<div><label>Kunci TIDAK MIRIP</label><select name="matrix_correct_tidak"><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
-</div>
-</div>
-
-<div id="essayFields" style="display:none"><label>Jawaban acuan <span class="ui-sub">(opsional)</span></label><textarea name="essay_answer_key" placeholder="Kunci atau jawaban yang diharapkan"></textarea></div>
-
-<button class="ui-btn full-btn" type="submit">Simpan Soal</button>
-</form>
-</section>
-
-<section class="ui-card import-card"><h3>⇩ Import Soal</h3><p class="ui-sub">CSV, XLS, atau XLSX.</p>
-<form method="post" action="import_questions.php" enctype="multipart/form-data">
-<input type="hidden" name="csrf" value="<?=htmlspecialchars(csrf_token())?>"><input type="hidden" name="exam_id" value="<?=$id?>">
-<input type="file" name="file" required accept=".csv,.xls,.xlsx"><button class="ui-btn secondary full-btn" type="submit">Import</button>
+<div id="mcqFields"><div id="optionList" class="form-grid compact-grid"></div><div style="display:flex;gap:8px;margin:10px 0"><button type="button" class="ui-btn secondary" id="addOption">+ Tambah Pilihan</button><button type="button" class="ui-btn secondary" id="removeOption">− Kurangi Pilihan</button></div></div>
+<div id="gradingFields"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="use_answer_key" id="useAnswerKey" checked> Gunakan Kunci Jawaban &amp; Poin</label><div id="gradingDetails"><div id="standard-answer-key"><label>Kunci jawaban</label><select name="correct_option" id="correctOption"></select></div></div></div>
+<div id="matrixFields" style="display:none"><p class="ui-sub" style="margin:8px 0 10px">Peserta memilih satu jawaban untuk MIRIP dan satu untuk TIDAK MIRIP.</p><div class="form-grid compact-grid"><div><label>Kunci MIRIP</label><select name="matrix_correct_mirip"><option>A</option><option>B</option><option>C</option><option>D</option></select></div><div><label>Kunci TIDAK MIRIP</label><select name="matrix_correct_tidak"><option>A</option><option>B</option><option>C</option><option>D</option></select></div></div></div>
+<div id="essayFields" style="display:none"><label>Jawaban acuan <span class="ui-sub">(opsional)</span></label><textarea name="essay_answer_key" placeholder="Kunci atau jawaban yang diharapkan"></textarea></div><button class="ui-btn full-btn" type="submit">Simpan Soal</button>
 </form></section>
-</aside></div></div>
-<footer class="admin-footer"><span>© <?=date('Y')?> Ujian Online</span><span>Versi <?=htmlspecialchars(app_version())?></span></footer>
-</main></div>
-
-<script>
-document.querySelector('.menu-toggle').onclick=()=>document.body.classList.toggle('sidebar-open');
-const type=document.getElementById('questionType'), optionList=document.getElementById('optionList'), correct=document.getElementById('correctOption'), useKey=document.getElementById('useAnswerKey'); let count=4; const letters='ABCDEFGH';
-function renderOptions(){optionList.innerHTML='';correct.innerHTML='';for(let i=0;i<count;i++){let k=letters[i];optionList.insertAdjacentHTML('beforeend',`<div><label>Pilihan ${k}</label><input name="${k}" placeholder="Jawaban ${k}" ${i<2?'required':''}></div>`);correct.insertAdjacentHTML('beforeend',`<option value="${k}">${k}</option>`)}document.getElementById('addOption').disabled=count>=8;document.getElementById('removeOption').disabled=count<=2;}
-function sync(){const v=type.value,isMatrix=v==='matrix_disc',isEssay=v==='essay';document.getElementById('mcqFields').style.display=(v==='mcq'||isMatrix)?'block':'none';document.getElementById('essayFields').style.display=isEssay?'block':'none';document.getElementById('matrixFields').style.display=isMatrix?'block':'none';document.getElementById('gradingFields').style.display=isMatrix?'none':'block';if(isMatrix)useKey.checked=false;document.getElementById('gradingDetails').style.display=useKey.checked?'block':'none';document.getElementById('standard-answer-key').style.display=v==='mcq'?'block':'none';}
-renderOptions();type.onchange=sync;useKey.onchange=sync;document.getElementById('addOption').onclick=()=>{if(count<8){count++;renderOptions()}};document.getElementById('removeOption').onclick=()=>{if(count>2){count--;renderOptions()}};sync();
-document.getElementById('questionSearch').oninput=function(){let q=this.value.toLowerCase(),n=0;document.querySelectorAll('.question-card').forEach(x=>{let ok=x.dataset.search.includes(q);x.style.display=ok?'':'none';if(ok)n++});document.getElementById('noQuestionResult').style.display=n?'none':''};
-</script>
+<section class="ui-card import-card"><h3>⇩ Import Soal</h3><p class="ui-sub">CSV, XLS, atau XLSX.</p><form method="post" action="import_questions.php" enctype="multipart/form-data"><input type="hidden" name="csrf" value="<?=htmlspecialchars(csrf_token())?>"><input type="hidden" name="exam_id" value="<?=$id?>"><input type="file" name="file" required accept=".csv,.xls,.xlsx"><button class="ui-btn secondary full-btn" type="submit">Import</button></form></section>
+</aside></div></div><footer class="admin-footer"><span>© <?=date('Y')?> Ujian Online</span><span>Versi <?=htmlspecialchars(app_version())?></span></footer></main></div>
+<script>document.querySelector('.menu-toggle').onclick=()=>document.body.classList.toggle('sidebar-open');const type=document.getElementById('questionType'),optionList=document.getElementById('optionList'),correct=document.getElementById('correctOption'),useKey=document.getElementById('useAnswerKey');let count=4;const letters='ABCDEFGH';function renderOptions(){optionList.innerHTML='';correct.innerHTML='';for(let i=0;i<count;i++){let k=letters[i];optionList.insertAdjacentHTML('beforeend',`<div><label>Pilihan ${k}</label><input name="${k}" placeholder="Jawaban ${k}" ${i<2?'required':''}></div>`);correct.insertAdjacentHTML('beforeend',`<option value="${k}">${k}</option>`)}document.getElementById('addOption').disabled=count>=8;document.getElementById('removeOption').disabled=count<=2}function sync(){const v=type.value,isMatrix=v==='matrix_disc',isEssay=v==='essay';document.getElementById('mcqFields').style.display=(v==='mcq'||isMatrix)?'block':'none';document.getElementById('essayFields').style.display=isEssay?'block':'none';document.getElementById('matrixFields').style.display=isMatrix?'block':'none';document.getElementById('gradingFields').style.display=isMatrix?'none':'block';if(isMatrix)useKey.checked=false;document.getElementById('gradingDetails').style.display=useKey.checked?'block':'none';document.getElementById('standard-answer-key').style.display=v==='mcq'?'block':'none'}renderOptions();type.onchange=sync;useKey.onchange=sync;document.getElementById('addOption').onclick=()=>{if(count<8){count++;renderOptions()}};document.getElementById('removeOption').onclick=()=>{if(count>2){count--;renderOptions()}};sync();document.getElementById('questionSearch').oninput=function(){let q=this.value.toLowerCase(),n=0;document.querySelectorAll('.question-card').forEach(x=>{let ok=x.dataset.search.includes(q);x.style.display=ok?'':'none';if(ok)n++});document.getElementById('noQuestionResult').style.display=n?'none':''};</script>
 </body></html>
