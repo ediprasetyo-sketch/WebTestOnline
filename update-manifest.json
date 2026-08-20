@@ -1,7 +1,7 @@
 {
-  "version": "6.3.56",
+  "version": "6.3.63",
   "package_url": "",
   "sha256": "",
-  "changelog": "V6.3.48 Full synchronization: update-safe schema helper, Matrix/DISC schema repair, edit support, manifest/version synchronization.",
-  "notes": "Matrix/DISC participant UI cleanup: removed duplicate empty A-D option cards and aligned answer grid with the approved layout."
+  "changelog": "V6.3.63 Critical stabilization: restored public URL helpers with reverse-proxy support, separated manual submission from timeout expiration, and synchronized release metadata.",
+  "notes": "Set PUBLIC_BASE_URL when using a fixed domain or reverse proxy; otherwise public links are generated from the current request host and forwarded HTTPS headers."
 }
