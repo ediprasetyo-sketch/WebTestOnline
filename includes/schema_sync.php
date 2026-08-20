@@ -17,6 +17,22 @@ if (!function_exists('ensure_matrix_disc_schema')) {
             $qcols[(string)$row['Field']] = $row;
         }
 
+        // Flexible question schema: older installations may only have option_a..option_d.
+        // Add new option columns and scoring toggle before any INSERT/UPDATE uses them.
+        $questionColumns = [
+            'option_e' => "VARCHAR(500) NULL",
+            'option_f' => "VARCHAR(500) NULL",
+            'option_g' => "VARCHAR(500) NULL",
+            'option_h' => "VARCHAR(500) NULL",
+            'use_answer_key' => "TINYINT(1) NOT NULL DEFAULT 1",
+        ];
+        foreach ($questionColumns as $column => $definition) {
+            if (!isset($qcols[$column])) {
+                $pdo->exec("ALTER TABLE questions ADD COLUMN `".$column."` ".$definition);
+                $qcols[$column] = true;
+            }
+        }
+
         if (isset($qcols['type'])) {
             $type = strtolower((string)($qcols['type']['Type'] ?? ''));
             if (!str_contains($type, "'matrix_disc'")) {

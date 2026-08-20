@@ -88,7 +88,7 @@ try {
     $attemptId = (int)$pdo->lastInsertId();
 
     $q = $pdo->prepare(
-        "SELECT id,type FROM questions
+        "SELECT id,type,option_a,option_b,option_c,option_d,option_e,option_f,option_g,option_h FROM questions
          WHERE exam_id=?
          ORDER BY sort_order,id"
     );
@@ -105,20 +105,13 @@ try {
     );
 
     foreach ($questions as $i => $question) {
-        $optionMap = ['A'=>'A','B'=>'B','C'=>'C','D'=>'D'];
+        $keys=[]; foreach(['A','B','C','D','E','F','G','H'] as $k){if(trim((string)($question['option_'.strtolower($k)]??''))!=='')$keys[]=$k;} $optionMap=array_combine($keys,$keys);
 
         if (
             (int)$exam['randomize_options'] === 1 &&
             in_array($question['type'], ['mcq','matrix_disc'], true)
         ) {
-            $original = ['A','B','C','D'];
-            shuffle($original);
-            $optionMap = [
-                'A'=>$original[0],
-                'B'=>$original[1],
-                'C'=>$original[2],
-                'D'=>$original[3]
-            ];
+            $original=$keys; shuffle($original); $optionMap=array_combine($keys,$original);
         }
 
         $mapStmt->execute([

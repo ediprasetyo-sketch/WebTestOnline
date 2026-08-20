@@ -35,7 +35,7 @@ $selected=$b['selected_option']??null;
 $matrixAnswer=null;
 $map=json_decode($question['option_map']?:'{}',true)?:[];
 if($question['type']==='mcq'){
-    if(!in_array($selected,['A','B','C','D'],true))json_response(['error'=>'Pilihan tidak valid'],400);
+    if(!in_array($selected,['A','B','C','D','E','F','G','H'],true))json_response(['error'=>'Pilihan tidak valid'],400);
     $selected=$map[$selected]??$selected;
 }elseif($question['type']==='matrix_disc'){
     $input=$b['matrix_answer']??null;
@@ -43,7 +43,7 @@ if($question['type']==='mcq'){
     $matrixAnswer=[];
     foreach(['mirip','tidak_mirip'] as $key){
         $choice=(string)($input[$key]??'');
-        if(!in_array($choice,['A','B','C','D'],true))json_response(['error'=>'Setiap baris matriks wajib dipilih'],400);
+        if(!in_array($choice,['A','B','C','D','E','F','G','H'],true))json_response(['error'=>'Setiap baris matriks wajib dipilih'],400);
         $matrixAnswer[$key]=$map[$choice]??$choice;
     }
     if($matrixAnswer['mirip']===$matrixAnswer['tidak_mirip']){

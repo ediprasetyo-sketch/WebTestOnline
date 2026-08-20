@@ -54,8 +54,12 @@ function question_image_url(?string $path): string {
 <label>Gambar soal <span class="ui-sub">(opsional)</span></label><input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,image/gif">
 
 <div id="mcqFields">
-<div class="form-grid compact-grid"><?php foreach(['A','B','C','D'] as $x): ?><div><label>Pilihan <?=$x?></label><input name="<?=$x?>" placeholder="Jawaban <?=$x?>"></div><?php endforeach;?></div>
-<div id="standard-answer-key"><label>Kunci jawaban</label><select name="correct_option"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
+<div id="optionList" class="form-grid compact-grid"></div>
+<div style="display:flex;gap:8px;margin:10px 0"><button type="button" class="ui-btn secondary" id="addOption">+ Tambah Pilihan</button><button type="button" class="ui-btn secondary" id="removeOption">− Kurangi Pilihan</button></div>
+</div>
+<div id="gradingFields">
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="use_answer_key" id="useAnswerKey" checked> Gunakan Kunci Jawaban &amp; Poin</label>
+<div id="gradingDetails"><div id="standard-answer-key"><label>Kunci jawaban</label><select name="correct_option" id="correctOption"></select></div></div>
 </div>
 
 <div id="matrixFields" style="display:none">
@@ -67,7 +71,7 @@ function question_image_url(?string $path): string {
 </div>
 
 <div id="essayFields" style="display:none"><label>Jawaban acuan <span class="ui-sub">(opsional)</span></label><textarea name="essay_answer_key" placeholder="Kunci atau jawaban yang diharapkan"></textarea></div>
-<label>Poin</label><input type="number" name="points" min="0" step="0.5" value="1">
+
 <button class="ui-btn full-btn" type="submit">Simpan Soal</button>
 </form>
 </section>
@@ -83,19 +87,10 @@ function question_image_url(?string $path): string {
 
 <script>
 document.querySelector('.menu-toggle').onclick=()=>document.body.classList.toggle('sidebar-open');
-const type=document.getElementById('questionType');
-function sync(){
-  const v=type.value;
-  document.getElementById('mcqFields').style.display=(v==='mcq'||v==='matrix_disc')?'block':'none';
-  document.getElementById('essayFields').style.display=v==='essay'?'block':'none';
-  document.getElementById('matrixFields').style.display=v==='matrix_disc'?'block':'none';
-  document.getElementById('standard-answer-key').style.display=v==='matrix_disc'?'none':'block';
-}
-type.onchange=sync; sync();
-document.getElementById('questionSearch').oninput=function(){
- let q=this.value.toLowerCase(),n=0;
- document.querySelectorAll('.question-card').forEach(x=>{let ok=x.dataset.search.includes(q);x.style.display=ok?'':'none';if(ok)n++});
- document.getElementById('noQuestionResult').style.display=n?'none':'';
-};
+const type=document.getElementById('questionType'), optionList=document.getElementById('optionList'), correct=document.getElementById('correctOption'), useKey=document.getElementById('useAnswerKey'); let count=4; const letters='ABCDEFGH';
+function renderOptions(){optionList.innerHTML='';correct.innerHTML='';for(let i=0;i<count;i++){let k=letters[i];optionList.insertAdjacentHTML('beforeend',`<div><label>Pilihan ${k}</label><input name="${k}" placeholder="Jawaban ${k}" ${i<2?'required':''}></div>`);correct.insertAdjacentHTML('beforeend',`<option value="${k}">${k}</option>`)}document.getElementById('addOption').disabled=count>=8;document.getElementById('removeOption').disabled=count<=2;}
+function sync(){const v=type.value,isMatrix=v==='matrix_disc',isEssay=v==='essay';document.getElementById('mcqFields').style.display=(v==='mcq'||isMatrix)?'block':'none';document.getElementById('essayFields').style.display=isEssay?'block':'none';document.getElementById('matrixFields').style.display=isMatrix?'block':'none';document.getElementById('gradingFields').style.display=isMatrix?'none':'block';if(isMatrix)useKey.checked=false;document.getElementById('gradingDetails').style.display=useKey.checked?'block':'none';document.getElementById('standard-answer-key').style.display=v==='mcq'?'block':'none';}
+renderOptions();type.onchange=sync;useKey.onchange=sync;document.getElementById('addOption').onclick=()=>{if(count<8){count++;renderOptions()}};document.getElementById('removeOption').onclick=()=>{if(count>2){count--;renderOptions()}};sync();
+document.getElementById('questionSearch').oninput=function(){let q=this.value.toLowerCase(),n=0;document.querySelectorAll('.question-card').forEach(x=>{let ok=x.dataset.search.includes(q);x.style.display=ok?'':'none';if(ok)n++});document.getElementById('noQuestionResult').style.display=n?'none':''};
 </script>
 </body></html>

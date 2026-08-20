@@ -56,11 +56,11 @@ if (!function_exists('sync_attempt_statuses')) {
                     if ($normalize($answer) === $normalize($key)) $saveEssay->execute([(int)$current['id'],(int)$row['id'],(float)$row['points']]);
                 }
 
-                $scoreStmt = $pdo->prepare("SELECT q.type,q.correct_option,q.matrix_correct_mirip,q.matrix_correct_tidak,q.points,ans.selected_option,ans.matrix_answer,ans.essay_score FROM questions q LEFT JOIN answers ans ON ans.question_id=q.id AND ans.attempt_id=? WHERE q.exam_id=?");
+                $scoreStmt = $pdo->prepare("SELECT q.type,q.use_answer_key,q.correct_option,q.matrix_correct_mirip,q.matrix_correct_tidak,q.points,ans.selected_option,ans.matrix_answer,ans.essay_score FROM questions q LEFT JOIN answers ans ON ans.question_id=q.id AND ans.attempt_id=? WHERE q.exam_id=?");
                 $scoreStmt->execute([(int)$current['id'], (int)$current['exam_id']]);
                 $score = 0.0;
                 foreach ($scoreStmt as $row) {
-                    if ($row['type']==='mcq' && $row['selected_option']===$row['correct_option']) $score += (float)$row['points'];
+                    if ((int)($row['use_answer_key']??1)===1 && $row['type']==='mcq' && $row['selected_option']===$row['correct_option']) $score += (float)$row['points'];
                     elseif ($row['type']==='matrix_disc') {
                         $answer=json_decode((string)($row['matrix_answer'] ?? ''),true) ?: [];
                         $half=(float)$row['points']/2;

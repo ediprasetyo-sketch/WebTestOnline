@@ -1,7 +1,5 @@
 {
-  "version": "6.3.64",
-  "package_url": "",
-  "sha256": "",
-  "changelog": "V6.3.64 Runtime stabilization: validates distinct Matrix/DISC selections and returns explicit submitted/expired terminal status from the submit API.",
-  "notes": "Set PUBLIC_BASE_URL when using a fixed domain or reverse proxy; otherwise public links are generated from the current request host and forwarded HTTPS headers."
+  "version": "6.3.69",
+  "changelog": "Memperbaiki duplikasi soal Matriks/DISC. question_text legacy yang berisi A-D kini tidak dicetak lagi sebagai teks utama setelah opsi berhasil dipisahkan.",
+  "notes": "Opsi A-D hanya tampil satu kali pada halaman peserta dan Preview Admin."
 }

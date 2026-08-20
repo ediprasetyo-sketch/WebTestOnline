@@ -43,6 +43,7 @@ function preview_image(?string $path): string {
 .preview-nav{display:flex;justify-content:center;align-items:center;gap:10px;margin:18px 0;font-size:13px;font-weight:700}.preview-nav button:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;justify-content:center;gap:9px;margin:20px 0}.btn{display:inline-block;padding:10px 14px;border-radius:9px;text-decoration:none;font-size:13px;font-weight:800}.primary{background:var(--blue);color:#fff}.secondary{background:#eef2f7;color:#344054}
 @media(max-width:600px){.hero h1{font-size:24px}.q{padding:17px}.question{font-size:16px}}
 @media print{.top{position:static}.actions,.banner,.back{display:none}.q{break-inside:avoid;box-shadow:none}}
+.matrix-options-preview{display:grid;gap:8px;margin:14px 0}.matrix-option-preview{display:flex;gap:12px;align-items:flex-start;line-height:1.55;font-size:16px}.matrix-option-preview b{min-width:24px;color:#344054}
 </style>
 <link rel="stylesheet" href="assets/admin-ui.css">
 </head>
@@ -67,14 +68,40 @@ function preview_image(?string $path): string {
     <div class="num">Soal <?=($i+1)?> <span class="badge"><?=($q['type']==='essay'?'Essay':($q['type']==='matrix_disc'?'Matriks / DISC':'Pilihan Ganda'))?></span></div>
     <div class="points"><?=htmlspecialchars((string)$q['points'])?> poin</div>
   </div>
-  <div class="question"><?=htmlspecialchars($q['question_text'])?></div>
+  <?php
+    $isMatrix = ($q['type'] ?? '') === 'matrix_disc';
+    $legacyMatrixText = trim((string)($q['question_text'] ?? ''));
+    $matrixHasEmbeddedOptions = $isMatrix && preg_match_all('/(?:^|\s)[A-D]\.\s*/', $legacyMatrixText, $matrixMarkerMatches) >= 4;
+  ?>
+  <div class="question"><?= $matrixHasEmbeddedOptions ? '' : htmlspecialchars($q['question_text']) ?></div>
   <?php if($img): ?><img class="image" src="<?=htmlspecialchars($img)?>" alt="Gambar soal" onerror="this.style.display='none'"><?php endif; ?>
   <?php if($q['type']==='essay'): ?>
     <div class="answer">Kolom jawaban peserta: <b>Essay</b></div>
     <?php if(!empty($q['essay_answer_key'])): ?><div class="answer"><b>Jawaban acuan admin:</b> <?=htmlspecialchars($q['essay_answer_key'])?></div><?php endif; ?>
-  <?php elseif($q['type']==='matrix_disc'): ?>
+  <?php elseif($q['type']==='matrix_disc'): 
+    $matrixOptions = [
+      'A' => trim((string)($q['option_a'] ?? '')),
+      'B' => trim((string)($q['option_b'] ?? '')),
+      'C' => trim((string)($q['option_c'] ?? '')),
+      'D' => trim((string)($q['option_d'] ?? '')),
+    ];
+    if (!array_filter($matrixOptions) && preg_match_all('/(?:^|\s)([A-D])\.\s*/', $legacyMatrixText, $m, PREG_OFFSET_CAPTURE) && count($m[0]) >= 4) {
+      $matrixOptions = ['A'=>'','B'=>'','C'=>'','D'=>''];
+      for ($mi=0; $mi<count($m[0]); $mi++) {
+        $letter = $m[1][$mi][0];
+        $start = $m[0][$mi][1] + strlen($m[0][$mi][0]);
+        $end = ($mi+1<count($m[0])) ? $m[0][$mi+1][1] : strlen($legacyMatrixText);
+        $matrixOptions[$letter] = trim(substr($legacyMatrixText, $start, $end-$start));
+      }
+    }
+  ?>
+    <div class="matrix-options-preview">
+      <?php foreach(['A','B','C','D'] as $letter): if(trim((string)($matrixOptions[$letter]??''))==='') continue; ?>
+      <div class="matrix-option-preview"><b><?=$letter?>.</b><span><?=htmlspecialchars((string)($matrixOptions[$letter]??''))?></span></div>
+      <?php endforeach; ?>
+    </div>
     <div class="matrix-preview"><table><thead><tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th></tr></thead><tbody><tr><th>MIRIP</th><?php foreach(['A','B','C','D'] as $x):?><td>○</td><?php endforeach;?></tr><tr><th>TIDAK MIRIP</th><?php foreach(['A','B','C','D'] as $x):?><td>○</td><?php endforeach;?></tr></tbody></table></div>
-    <div class="answer"><b>Kunci admin:</b> MIRIP <?=htmlspecialchars((string)$q['matrix_correct_mirip'])?> · TIDAK MIRIP <?=htmlspecialchars((string)$q['matrix_correct_tidak'])?></div>
+    <?php /* Matriks / DISC tidak menampilkan kunci admin pada Preview. */ ?>
   <?php else: ?>
     <div class="options">
       <?php foreach(['A'=>'option_a','B'=>'option_b','C'=>'option_c','D'=>'option_d'] as $letter=>$field): ?>

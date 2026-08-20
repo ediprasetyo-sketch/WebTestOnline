@@ -39,12 +39,13 @@ if ($attemptId > 0) {
         $map = json_decode($row['option_map'] ?: '{}', true) ?: ['A'=>'A','B'=>'B','C'=>'C','D'=>'D'];
         $original = [
             'A'=>$row['option_a'], 'B'=>$row['option_b'],
-            'C'=>$row['option_c'], 'D'=>$row['option_d']
+            'C'=>$row['option_c'], 'D'=>$row['option_d'], 'E'=>$row['option_e']??null, 'F'=>$row['option_f']??null, 'G'=>$row['option_g']??null, 'H'=>$row['option_h']??null
         ];
         $row['option_a'] = $original[$map['A']] ?? null;
         $row['option_b'] = $original[$map['B']] ?? null;
         $row['option_c'] = $original[$map['C']] ?? null;
-        $row['option_d'] = $original[$map['D']] ?? null;
+        $row['option_d'] = $original[$map['D'] ?? 'D'] ?? null;
+        foreach(['E','F','G','H'] as $k){ $row['option_'.strtolower($k)]=$original[$map[$k]??$k]??null; }
         $savedOriginal = $row['saved_selected_option'] ?? null;
         $row['saved_display_option'] = null;
         if ($savedOriginal) {
@@ -71,7 +72,7 @@ if ($attemptId > 0) {
     }
 } else {
     $stmt = db()->prepare(
-        "SELECT id,type,question_text,question_image,option_a,option_b,option_c,option_d,points
+        "SELECT id,type,question_text,question_image,option_a,option_b,option_c,option_d,option_e,option_f,option_g,option_h,use_answer_key,points
          FROM questions WHERE exam_id=? ORDER BY sort_order,id"
     );
     $stmt->execute([$examId]);
@@ -81,6 +82,7 @@ if ($attemptId > 0) {
 json_response([
     'id'=>(int)$exam['id'],
     'title'=>$exam['title'],
+    'question_mode'=>($exam['question_mode'] ?? 'all'),
     'questions'=>$rows,
     'server_now_ms'=>time()*1000,
     'deadline_ms'=>$attemptId > 0 ? strtotime($attempt['deadline_at'])*1000 : null
