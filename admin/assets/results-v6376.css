@@ -1,2 +1,3 @@
-/* Compatibility entry point for Hasil Ujian. Unified with Dashboard in V6.3.81. */
+/* Compatibility entry point for Hasil Ujian. */
 @import url("ui-unified-v6381.css?v=6.3.81");
+@import url("ui-shell-v6382.css?v=6.3.82");
