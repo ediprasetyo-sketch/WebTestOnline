@@ -1,7 +1,7 @@
 {
-  "version": "6.3.63",
+  "version": "6.3.64",
   "package_url": "",
   "sha256": "",
-  "changelog": "V6.3.63 Critical stabilization: restored public URL helpers with reverse-proxy support, separated manual submission from timeout expiration, and synchronized release metadata.",
+  "changelog": "V6.3.64 Runtime stabilization: validates distinct Matrix/DISC selections and returns explicit submitted/expired terminal status from the submit API.",
   "notes": "Set PUBLIC_BASE_URL when using a fixed domain or reverse proxy; otherwise public links are generated from the current request host and forwarded HTTPS headers."
 }
