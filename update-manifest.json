@@ -1,5 +1,11 @@
 {
-  "version": "6.3.76",
-  "changelog": "Normalisasi UI halaman Hasil Ujian agar konsisten dengan Admin UI, termasuk statistik, daftar attempt, pencarian peserta, tombol aksi, dan detail attempt.",
-  "notes": "Paket ini kompatibel dengan Update Sistem. Upload ZIP melalui Admin > Update Sistem; backup otomatis dibuat sebelum instalasi."
+  "version": "6.3.84",
+  "release": "V6.3.84 Update Package Audit Repair",
+  "changelog": [
+    "Sinkronisasi versi paket dengan VERSION.txt.",
+    "Perbaikan proses pembuatan paket agar selalu memakai seluruh working tree versi terbaru.",
+    "Paket update tidak boleh dibuat hanya dari commit release terakhir, karena commit release dapat berisi VERSION.txt saja sementara perbaikan berada pada commit sebelumnya.",
+    "Menambahkan skrip build paket update yang mengecualikan config.php, storage, uploads, dan .git."
+  ],
+  "notes": "Build paket dari root repository menggunakan tools/build-update.ps1. ZIP hasil harus berisi satu folder root proyek dan VERSION.txt versi 6.3.84."
 }
