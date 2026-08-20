@@ -14,6 +14,11 @@ if($attemptId>0 && participant_session()!==null){
     $q->execute([$attemptId,(int)$p['id']]);
     $row=$q->fetch();
     if(!$row){ http_response_code(404); exit('Data ujian tidak ditemukan.'); }
+    if(!in_array((string)$row['status'],['submitted','expired'],true)){
+        http_response_code(409);
+        exit('Ujian belum selesai. Selesaikan atau kirim ujian terlebih dahulu.');
+    }
+    $auto=((string)$row['status']==='expired');
     $completion=[
         'attempt_id'=>(int)$row['id'],
         'title'=>(string)$row['title'],
@@ -31,37 +36,5 @@ if($attemptId>0 && participant_session()!==null){
 ?>
 <!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ujian Selesai</title>
 <style>
-:root{--blue:#175cd3;--green:#027a48;--ink:#17202a;--muted:#667085;--line:#e4e7ec}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f5f7fb;font-family:Inter,Arial;color:var(--ink)}.card{width:min(620px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;padding:38px;text-align:center;box-shadow:0 12px 34px #10182812}.check{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:#ecfdf3;color:var(--green);font-size:34px;font-weight:900}h1{margin:0 0 10px;font-size:30px}p{color:var(--muted);line-height:1.65}.info{margin:24px 0;text-align:left;background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:16px}.row{padding:8px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}.label{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#667085;margin-bottom:3px}.btn{display:inline-block;margin-top:8px;padding:12px 20px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:800}.note{font-size:13px;margin-top:18px}
-
-/* V6.3.56 Mobile Participant */
-
-@media(max-width:700px){
-  body{font-size:16px}
-  .wrap{margin:0 auto;padding:14px;max-width:100%}
-  .card{padding:20px 16px;border-radius:16px}
-  h1{font-size:26px;line-height:1.2}
-  input,textarea,select,button{font-size:16px!important}
-}
-@media(max-width:480px){
-  .wrap{padding:10px}.card{padding:18px 14px;border-radius:14px}
-  h1{font-size:23px}.link-help{font-size:13px}
-}
-
-
-/* V6.3.58 responsive participant baseline */
-img{max-width:100%;height:auto}
-@media (max-width:760px){
-  body{font-size:16px!important;overflow-x:hidden}
-  .wrap{width:100%;max-width:none;padding:14px!important}
-  .card{padding:18px 14px!important;margin:12px 0!important;border-radius:14px!important}
-  input,select,textarea,button{font-size:16px!important;max-width:100%}
-  input,select,textarea{min-height:44px}
-  button,.btn{min-height:44px;touch-action:manipulation}
-  table{max-width:100%}
-}
-@media (max-width:480px){
-  .wrap{padding:10px!important}
-  .card{padding:16px 12px!important}
-}
-
+:root{--blue:#175cd3;--green:#027a48;--ink:#17202a;--muted:#667085;--line:#e4e7ec}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f5f7fb;font-family:Inter,Arial;color:var(--ink)}.card{width:min(620px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;padding:38px;text-align:center;box-shadow:0 12px 34px #10182812}.check{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:#ecfdf3;color:var(--green);font-size:34px;font-weight:900}h1{margin:0 0 10px;font-size:30px}p{color:var(--muted);line-height:1.65}.info{margin:24px 0;text-align:left;background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:16px}.row{padding:8px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}.label{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#667085;margin-bottom:3px}.btn{display:inline-block;margin-top:8px;padding:12px 20px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:800}.note{font-size:13px;margin-top:18px}@media(max-width:700px){body{font-size:16px;padding:14px}.card{padding:20px 16px;border-radius:16px}h1{font-size:26px;line-height:1.2}.btn{min-height:44px}}@media(max-width:480px){.card{padding:18px 14px;border-radius:14px}h1{font-size:23px}}
 </style></head><body><main class="card"><div class="check">✓</div><h1><?= $completion['auto']?'Waktu Ujian Berakhir':'Ujian Berhasil Dikirim' ?></h1><p><?= $completion['auto']?'Waktu ujian telah habis. Jawaban yang berhasil tersimpan telah dikumpulkan.':'Jawaban Anda telah berhasil disimpan dan dikirim.' ?></p><section class="info"><div class="row"><span class="label">Ujian</span><b><?=htmlspecialchars($completion['title'],ENT_QUOTES,'UTF-8')?></b></div><div class="row"><span class="label">Peserta</span><b><?=htmlspecialchars($completion['name'],ENT_QUOTES,'UTF-8')?></b><br><small><?=htmlspecialchars($completion['email'],ENT_QUOTES,'UTF-8')?></small></div><div class="row"><span class="label">Status</span><b>SELESAI</b></div></section><p class="note">Anda telah otomatis keluar dari sesi ujian. Halaman ini tidak akan membawa Anda ke Dashboard Admin.</p><a class="btn" href="../login.php">Selesai</a></main></body></html>
