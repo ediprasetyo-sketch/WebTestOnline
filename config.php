@@ -40,42 +40,98 @@ function app_base_path(): string {
     return substr($script, 0, $pos);
 }
 
-function app_url(string $path=''): string { return app_base_path() . '/' . ltrim($path, '/'); }
-
-if (!function_exists('public_base_url')) {
-    function public_base_url(): string {
-        $configured = trim((string)(getenv('PUBLIC_BASE_URL') ?: ''));
-        if ($configured !== '') return rtrim($configured, '/');
-        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
-        $scheme = $https ? 'https' : 'http';
-        $host = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
-        if ($host === '') $host = 'localhost';
-        return $scheme . '://' . $host . rtrim(app_base_path(), '/');
-    }
+function app_url(string $path=''): string {
+    return app_base_path() . '/' . ltrim($path, '/');
 }
-if (!function_exists('public_url')) {
-    function public_url(string $path=''): string { return rtrim(public_base_url(), '/') . '/' . ltrim($path, '/'); }
+
+function public_base_url(): string {
+    $configured = trim((string)(getenv('PUBLIC_BASE_URL') ?: ''));
+    if ($configured !== '') return rtrim($configured, '/');
+
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+    $scheme = $https ? 'https' : 'http';
+    $host = trim((string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? 'localhost'));
+    if ($host === '') $host = 'localhost';
+    return $scheme . '://' . $host . rtrim(app_base_path(), '/');
+}
+
+function public_url(string $path=''): string {
+    return rtrim(public_base_url(), '/') . '/' . ltrim($path, '/');
 }
 
 function require_login(string $role): void {
     if (empty($_SESSION['user']) || ($_SESSION['user']['role'] ?? null) !== $role) {
-        header('Location: ' . app_url('login.php')); exit;
+        header('Location: ' . app_url('login.php'));
+        exit;
     }
 }
 
 function json_response(array $data, int $status=200): never {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($data); exit;
+    echo json_encode($data);
+    exit;
 }
 
 function app_version(): string {
-    static $version = null; if ($version !== null) return $version;
-    $file = __DIR__ . '/VERSION.txt'; $raw = is_file($file) ? trim((string)file_get_contents($file)) : '';
+    static $version = null;
+    if ($version !== null) return $version;
+    $file = __DIR__ . '/VERSION.txt';
+    $raw = is_file($file) ? trim((string)file_get_contents($file)) : '';
     $version = preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$/', $raw) ? $raw : '0.0.0';
     return $version;
 }
 
-function csrf_token(): string { if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32)); return $_SESSION['csrf']; }
-function check_csrf(): void { if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) { http_response_code(419); exit('CSRF token tidak valid'); } }
+function ensure_migrations(): array {
+    static $done = false;
+    if ($done) return [];
+    $pdo = db();
+    $pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(64) PRIMARY KEY, checksum CHAR(64) NOT NULL, applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $dir = __DIR__ . '/migrations';
+    if (!is_dir($dir)) { $done = true; return []; }
+    $files = glob($dir . '/*.sql') ?: [];
+    usort($files, 'strnatcasecmp');
+    $applied = [];
+    foreach ($files as $file) {
+        $version = basename($file, '.sql');
+        $sql = trim((string)file_get_contents($file));
+        $checksum = hash('sha256', $sql);
+        $st = $pdo->prepare('SELECT checksum FROM schema_migrations WHERE version=?');
+        $st->execute([$version]);
+        $old = $st->fetchColumn();
+        if ($old !== false) {
+            if (!hash_equals((string)$old, $checksum)) throw new RuntimeException("Migration checksum berubah: {$version}");
+            continue;
+        }
+        if ($sql !== '') {
+            $pdo->beginTransaction();
+            try {
+                foreach (preg_split('/;\s*(?:\r?\n|$)/', $sql) as $statement) {
+                    $statement = trim($statement);
+                    if ($statement !== '') $pdo->exec($statement);
+                }
+                $pdo->prepare('INSERT INTO schema_migrations(version, checksum) VALUES(?,?)')->execute([$version, $checksum]);
+                $pdo->commit();
+                $applied[] = $version;
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+        }
+    }
+    $done = true;
+    return $applied;
+}
+
+function csrf_token(): string {
+    if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    return $_SESSION['csrf'];
+}
+
+function check_csrf(): void {
+    if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) {
+        http_response_code(419);
+        exit('CSRF token tidak valid');
+    }
+}
