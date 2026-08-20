@@ -1,11 +1,11 @@
 {
-  "version": "6.3.84",
-  "release": "V6.3.84 Update Package Audit Repair",
+  "version": "6.3.85",
+  "release": "V6.3.85 UI Parity and Essay Fix Delivery",
   "changelog": [
-    "Sinkronisasi versi paket dengan VERSION.txt.",
-    "Perbaikan proses pembuatan paket agar selalu memakai seluruh working tree versi terbaru.",
-    "Paket update tidak boleh dibuat hanya dari commit release terakhir, karena commit release dapat berisi VERSION.txt saja sementara perbaikan berada pada commit sebelumnya.",
-    "Menambahkan skrip build paket update yang mengecualikan config.php, storage, uploads, dan .git."
+    "Menaikkan versi paket agar update dapat dipasang di atas V6.3.84.",
+    "Menyertakan seluruh perubahan UI Kelola Soal dan Hasil Ujian yang sudah ada pada source terbaru.",
+    "Menyertakan perbaikan penyimpanan, jawaban referensi, poin, dan penilaian soal essay.",
+    "Mempertahankan validasi struktur ZIP, VERSION.txt, manifest, dan admin/update.php."
   ],
-  "notes": "Build paket dari root repository menggunakan tools/build-update.ps1. ZIP hasil harus berisi satu folder root proyek dan VERSION.txt versi 6.3.84."
+  "notes": "Build paket dari root repository menggunakan tools/build-update.ps1. ZIP hasil harus berisi VERSION.txt dan update-manifest.json versi 6.3.85 serta file aplikasi terbaru."
 }
