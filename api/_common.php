@@ -75,18 +75,41 @@ function auto_grade_essays(int $attemptId, int $examId): void {
     }
 }
 
-/** Finalize an active attempt with an explicit terminal status. */
+/** Finalize an active attempt exactly once with an explicit terminal status. */
 function complete_attempt(array $a, string $status): void {
     if ($a['status'] !== 'active') return;
     if (!in_array($status, ['submitted', 'expired'], true)) throw new InvalidArgumentException('Status attempt tidak valid');
 
     $pdo = db();
-    auto_grade_essays((int)$a['id'], (int)$a['exam_id']);
-    $score = calculate_attempt_score($a);
-    $pdo->prepare("UPDATE attempts SET status=?,submitted_at=NOW(),score=? WHERE id=? AND status='active'")
-        ->execute([$status, $score, $a['id']]);
-    $pdo->prepare("INSERT INTO audit_logs(user_id,exam_id,attempt_id,event_type) VALUES(?,?,?,?)")
-        ->execute([$a['user_id'], $a['exam_id'], $a['id'], $status === 'submitted' ? 'attempt_submitted' : 'attempt_expired']);
+    $pdo->beginTransaction();
+    try {
+        // Lock the attempt so simultaneous timer/manual-submit requests cannot
+        // both create a terminal event or overwrite the final score.
+        $lock = $pdo->prepare('SELECT id,exam_id,user_id,status FROM attempts WHERE id=? FOR UPDATE');
+        $lock->execute([(int)$a['id']]);
+        $current = $lock->fetch();
+        if (!$current || $current['status'] !== 'active') {
+            $pdo->commit();
+            return;
+        }
+
+        auto_grade_essays((int)$current['id'], (int)$current['exam_id']);
+        $score = calculate_attempt_score([
+            'id'=>(int)$current['id'],
+            'exam_id'=>(int)$current['exam_id']
+        ]);
+
+        $update = $pdo->prepare("UPDATE attempts SET status=?,submitted_at=NOW(),score=? WHERE id=? AND status='active'");
+        $update->execute([$status, $score, (int)$current['id']]);
+        if ($update->rowCount() === 1) {
+            $pdo->prepare("INSERT INTO audit_logs(user_id,exam_id,attempt_id,event_type) VALUES(?,?,?,?)")
+                ->execute([(int)$current['user_id'], (int)$current['exam_id'], (int)$current['id'], $status === 'submitted' ? 'attempt_submitted' : 'attempt_expired']);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
 }
 
 function submit_attempt(array $a): void { complete_attempt($a, 'submitted'); }
