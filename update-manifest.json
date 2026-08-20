@@ -1,7 +1,7 @@
 {
-  "version": "6.3.64",
+  "version": "6.3.66",
   "package_url": "",
   "sha256": "",
-  "changelog": "V6.3.64 Runtime stabilization: validates distinct Matrix/DISC selections and returns explicit submitted/expired terminal status from the submit API.",
-  "notes": "Set PUBLIC_BASE_URL when using a fixed domain or reverse proxy; otherwise public links are generated from the current request host and forwarded HTTPS headers."
+  "changelog": "V6.3.66: Preview Matriks/DISC tidak lagi menampilkan Kunci Admin. Tampilan peserta tetap memakai pilihan MIRIP dan TIDAK MIRIP dengan autosave.",
+  "notes": "Paket update kompatibel dengan Update Sistem. Set PUBLIC_BASE_URL saat memakai domain tetap atau reverse proxy."
 }
