@@ -1,0 +1,15 @@
+.git
+.github
+.env
+.env.*
+.gitignore
+storage
+uploads
+releases
+*.zip
+*.sql.gz
+*.bak
+.vscode
+.idea
+.DS_Store
+Thumbs.db
