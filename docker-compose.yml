@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: ujian-online-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18080:80"
+    environment:
+      APP_TIMEZONE: Asia/Jakarta
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ujian_online
+      DB_USER: ujian_app
+      DB_PASS: ${DB_PASSWORD}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./storage:/var/www/html/storage
+
+  db:
+    image: mariadb:10.11
+    container_name: ujian-online-db
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --skip-name-resolve=0
+    environment:
+      MARIADB_DATABASE: ujian_online
+      MARIADB_USER: ujian_app
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: Asia/Jakarta
+    volumes:
+      - ujian_online_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ujian_online_db:
