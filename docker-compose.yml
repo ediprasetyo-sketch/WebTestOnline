@@ -1,44 +1,46 @@
 services:
+  db:
+    image: mariadb:10.11
+    container_name: webtestonline-db
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-ujian_online}
+      MARIADB_USER: ${DB_USER:-ujian_app}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: ${APP_TIMEZONE:-Asia/Jakarta}
+    volumes:
+      - webtestonline_db:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p$$MARIADB_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
   app:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: ujian-online-app
+    container_name: webtestonline-app
     restart: unless-stopped
     ports:
-      - "127.0.0.1:18080:80"
+      - "${APP_PORT:-18080}:80"
     environment:
-      APP_TIMEZONE: Asia/Jakarta
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Jakarta}
       DB_HOST: db
       DB_PORT: 3306
-      DB_NAME: ujian_online
-      DB_USER: ujian_app
+      DB_NAME: ${DB_NAME:-ujian_online}
+      DB_USER: ${DB_USER:-ujian_app}
       DB_PASS: ${DB_PASSWORD}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./storage:/var/www/html/storage
 
-  db:
-    image: mariadb:10.11
-    container_name: ujian-online-db
-    restart: unless-stopped
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --skip-name-resolve=0
-    environment:
-      MARIADB_DATABASE: ujian_online
-      MARIADB_USER: ujian_app
-      MARIADB_PASSWORD: ${DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      TZ: Asia/Jakarta
-    volumes:
-      - ujian_online_db:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
 volumes:
-  ujian_online_db:
+  webtestonline_db:
