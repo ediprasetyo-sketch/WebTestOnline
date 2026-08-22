@@ -10,6 +10,7 @@ RUN apt-get update \
        libfreetype6-dev \
        libicu-dev \
        libxml2-dev \
+       libonig-dev \
        unzip \
        git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -27,20 +28,29 @@ RUN apt-get update \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
-
 COPY . /var/www/html/
 
 RUN if [ -f composer.json ]; then composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader; fi \
-    && mkdir -p storage/backups storage/update_uploads storage/update_staging storage/uploads \
-    && chown -R www-data:www-data /var/www/html/storage
+    && mkdir -p /var/www/html/storage/backups \
+       /var/www/html/storage/update_uploads \
+       /var/www/html/storage/update_staging \
+       /var/www/html/storage/uploads \
+    && chown -R www-data:www-data /var/www/html
 
 RUN printf '%s\n' \
     'ServerName localhost' \
+    '<Directory /var/www/html>' \
+    '    Options FollowSymLinks' \
+    '    AllowOverride All' \
+    '    Require all granted' \
+    '</Directory>' \
     'DirectoryIndex index.php index.html' \
     > /etc/apache2/conf-available/ujian-online.conf \
     && a2enconf ujian-online
 
-EXPOSE 80
+COPY docker/startup.sh /usr/local/bin/ujian-online-startup
+RUN chmod +x /usr/local/bin/ujian-online-startup
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD php -r "exit((int)!@fsockopen('127.0.0.1',80));"
+EXPOSE 80
+ENTRYPOINT ["/usr/local/bin/ujian-online-startup"]
+CMD ["apache2-foreground"]
